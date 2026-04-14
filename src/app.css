@@ -1,0 +1,35 @@
+@import 'tailwindcss';
+
+@theme {
+	/* OnlyOffice design tokens */
+	--color-toolbar-bg: #f7f7f7;
+	--color-toolbar-header: #446995;
+	--color-canvas-bg: #eee;
+	--color-page-bg: #fff;
+	--color-page-border: #ccc;
+	--color-toolbar-border: #cbcbcb;
+	--color-toolbar-hover: #e0e0e0;
+	--color-toolbar-active: #d4d4d4;
+	--color-sidebar-bg: #f1f1f1;
+	--color-statusbar-bg: #f7f7f7;
+	--color-accent: #446995;
+	--color-accent-hover: #365a82;
+	--color-text-primary: #333;
+	--color-text-secondary: #666;
+	--color-text-muted: #999;
+
+	--spacing-toolbar-height: 66px;
+	--spacing-statusbar-height: 25px;
+	--spacing-sidebar-width: 40px;
+	--spacing-button-big: 52px;
+}
+
+html, body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	overflow: hidden;
+	font-family: 'Helvetica Neue', Arial, sans-serif;
+	color: var(--color-text-primary);
+	background: var(--color-canvas-bg);
+}
