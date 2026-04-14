@@ -127,3 +127,18 @@ export async function canRedo(): Promise<boolean> {
 	const w = await wasm();
 	return w.can_redo();
 }
+
+export async function getHeaderHtml(): Promise<string> {
+	const w = await wasm();
+	return w.get_header_html();
+}
+
+export async function getFooterHtml(): Promise<string> {
+	const w = await wasm();
+	return w.get_footer_html();
+}
+
+export async function getPageCount(): Promise<number> {
+	const w = await wasm();
+	return w.get_page_count();
+}

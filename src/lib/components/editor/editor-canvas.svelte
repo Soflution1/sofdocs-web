@@ -13,7 +13,9 @@
 		toggleUnderline,
 		saveDocx,
 		getWordCount,
-		getParagraphCount
+		getParagraphCount,
+		getHeaderHtml,
+		getFooterHtml
 	} from '$lib/wasm/loader';
 
 	const doc = getDocumentState();
@@ -22,6 +24,20 @@
 
 	let editorEl: HTMLDivElement | undefined = $state();
 	let isComposing = $state(false);
+	let headerHtml = $state('');
+	let footerHtml = $state('');
+
+	async function loadHeaderFooter() {
+		if (!doc.isLoaded) return;
+		headerHtml = await getHeaderHtml();
+		footerHtml = await getFooterHtml();
+	}
+
+	$effect(() => {
+		if (doc.isLoaded) {
+			loadHeaderFooter();
+		}
+	});
 
 	function getDocPosition(node: Node, offset: number): { para: number; charOffset: number } | null {
 		const paraEl = findParaElement(node);
@@ -423,34 +439,74 @@
 		</div>
 	{:else if doc.isLoaded}
 		<div
-			class="bg-[var(--color-page-bg)] shadow-[0_1px_3px_rgba(0,0,0,0.12),0_4px_16px_rgba(0,0,0,0.08)] mx-auto"
+			class="page-container bg-[var(--color-page-bg)] shadow-[0_1px_3px_rgba(0,0,0,0.12),0_4px_16px_rgba(0,0,0,0.08)] mx-auto flex flex-col"
 			style="
 				width: {(816 * ui.zoom) / 100}px;
 				min-height: {(1056 * ui.zoom) / 100}px;
-				padding: {(96 * ui.zoom) / 100}px;
 				transform-origin: top center;
 			"
 		>
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- Header zone -->
+			{#if headerHtml}
+				<div
+					class="page-header select-none"
+					style="
+						padding: {(48 * ui.zoom) / 100}px {(96 * ui.zoom) / 100}px {(16 * ui.zoom) / 100}px;
+						font-size: {(9 * ui.zoom) / 100}pt;
+						color: var(--color-text-tertiary);
+						border-bottom: 1px solid #e8e8e8;
+						min-height: {(48 * ui.zoom) / 100}px;
+					"
+				>
+					{@html headerHtml}
+				</div>
+			{/if}
+
+			<!-- Main editable content area -->
 			<div
-				bind:this={editorEl}
-				class="sofdocs-content outline-none"
-				style="font-size: {(11 * ui.zoom) / 100}pt; line-height: 1.5;"
-				contenteditable="true"
-				spellcheck="true"
-				onbeforeinput={handleBeforeInput}
-				oninput={handleInput}
-				onkeydown={handleKeydown}
-				onpaste={handlePaste}
-				oncopy={handleCopy}
-				oncut={handleCopy}
-				onselectionchange={syncSelection}
-				onmouseup={syncSelection}
-				oncompositionstart={() => (isComposing = true)}
-				oncompositionend={() => (isComposing = false)}
+				style="
+					padding: {headerHtml ? (24 * ui.zoom) / 100 : (96 * ui.zoom) / 100}px {(96 * ui.zoom) / 100}px;
+					flex: 1;
+				"
 			>
-				{@html doc.html}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					bind:this={editorEl}
+					class="sofdocs-content outline-none"
+					style="font-size: {(11 * ui.zoom) / 100}pt; line-height: 1.5;"
+					contenteditable="true"
+					spellcheck="true"
+					onbeforeinput={handleBeforeInput}
+					oninput={handleInput}
+					onkeydown={handleKeydown}
+					onpaste={handlePaste}
+					oncopy={handleCopy}
+					oncut={handleCopy}
+					onselectionchange={syncSelection}
+					onmouseup={syncSelection}
+					oncompositionstart={() => (isComposing = true)}
+					oncompositionend={() => (isComposing = false)}
+				>
+					{@html doc.html}
+				</div>
 			</div>
+
+			<!-- Footer zone -->
+			{#if footerHtml}
+				<div
+					class="page-footer select-none"
+					style="
+						padding: {(16 * ui.zoom) / 100}px {(96 * ui.zoom) / 100}px {(48 * ui.zoom) / 100}px;
+						font-size: {(9 * ui.zoom) / 100}pt;
+						color: var(--color-text-tertiary);
+						border-top: 1px solid #e8e8e8;
+						min-height: {(48 * ui.zoom) / 100}px;
+						margin-top: auto;
+					"
+				>
+					{@html footerHtml}
+				</div>
+			{/if}
 		</div>
 	{:else}
 		<div class="flex flex-col items-center justify-center h-full gap-6">

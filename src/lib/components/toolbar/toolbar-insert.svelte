@@ -1,5 +1,14 @@
 <script lang="ts">
 	import Icon from '$lib/components/ui/icon.svelte';
+	import TableGridPicker from '$lib/components/ui/table-grid-picker.svelte';
+
+	let showTablePicker = $state(false);
+
+	function onTableSelect(rows: number, cols: number) {
+		showTablePicker = false;
+		// TODO: insert table via WASM when table editing is implemented
+		console.log(`Insert table: ${rows}×${cols}`);
+	}
 </script>
 
 <div class="flex items-stretch h-[var(--spacing-toolbar-controls-height)] bg-[var(--color-toolbar-bg)] shadow-[var(--color-toolbar-shadow)] px-1 select-none overflow-x-auto overflow-y-hidden">
@@ -16,12 +25,22 @@
 		</button>
 	</div>
 
-	<!-- Tables -->
-	<div class="toolbar-group">
-		<button class="toolbar-btn-big" title="Insert Table">
+	<!-- Tables — with grid picker -->
+	<div class="toolbar-group relative">
+		<button
+			class="toolbar-btn-big"
+			title="Insert Table"
+			onclick={() => (showTablePicker = !showTablePicker)}
+		>
 			<Icon name="btn-inserttable" size="big" />
-			<span class="toolbar-btn-label">Table</span>
+			<span class="toolbar-btn-label">Table ▾</span>
 		</button>
+		{#if showTablePicker}
+			<TableGridPicker
+				onselect={onTableSelect}
+				onclose={() => (showTablePicker = false)}
+			/>
+		{/if}
 	</div>
 
 	<!-- Illustrations -->
