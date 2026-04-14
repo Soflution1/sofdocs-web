@@ -17,15 +17,113 @@ export async function loadWasm(): Promise<InitOutput> {
 	return loadPromise;
 }
 
-export async function parseDocx(bytes: Uint8Array): Promise<{
-	html: string;
-	plainText: string;
-	wordCount: number;
-}> {
+async function wasm() {
 	await loadWasm();
-	const wasm = await import('sofdocs-wasm');
-	const html = wasm.get_document_html(bytes);
-	const plainText = wasm.get_document_text(bytes);
-	const wordCount = wasm.get_word_count(bytes);
-	return { html, plainText, wordCount };
+	return await import('sofdocs-wasm');
+}
+
+export async function loadDocx(bytes: Uint8Array): Promise<string> {
+	const w = await wasm();
+	w.load_docx(bytes);
+	return w.get_html();
+}
+
+export async function getHtml(): Promise<string> {
+	const w = await wasm();
+	return w.get_html();
+}
+
+export async function getPlainText(): Promise<string> {
+	const w = await wasm();
+	return w.get_plain_text();
+}
+
+export async function getWordCount(): Promise<number> {
+	const w = await wasm();
+	return w.get_word_count();
+}
+
+export async function getParagraphCount(): Promise<number> {
+	const w = await wasm();
+	return w.get_paragraph_count();
+}
+
+export async function saveDocx(): Promise<Uint8Array> {
+	const w = await wasm();
+	return w.save_docx();
+}
+
+export async function insertText(paragraph: number, offset: number, text: string): Promise<string> {
+	const w = await wasm();
+	return w.insert_text(paragraph, offset, text);
+}
+
+export async function deleteRange(
+	startPara: number,
+	startOffset: number,
+	endPara: number,
+	endOffset: number
+): Promise<string> {
+	const w = await wasm();
+	return w.delete_range(startPara, startOffset, endPara, endOffset);
+}
+
+export async function splitParagraph(paragraph: number, offset: number): Promise<string> {
+	const w = await wasm();
+	return w.split_paragraph(paragraph, offset);
+}
+
+export async function toggleBold(sp: number, so: number, ep: number, eo: number): Promise<string> {
+	const w = await wasm();
+	return w.toggle_bold(sp, so, ep, eo);
+}
+
+export async function toggleItalic(sp: number, so: number, ep: number, eo: number): Promise<string> {
+	const w = await wasm();
+	return w.toggle_italic(sp, so, ep, eo);
+}
+
+export async function toggleUnderline(sp: number, so: number, ep: number, eo: number): Promise<string> {
+	const w = await wasm();
+	return w.toggle_underline(sp, so, ep, eo);
+}
+
+export async function toggleStrikethrough(sp: number, so: number, ep: number, eo: number): Promise<string> {
+	const w = await wasm();
+	return w.toggle_strikethrough(sp, so, ep, eo);
+}
+
+export async function setFontFamily(sp: number, so: number, ep: number, eo: number, font: string): Promise<string> {
+	const w = await wasm();
+	return w.set_font_family(sp, so, ep, eo, font);
+}
+
+export async function setFontSize(sp: number, so: number, ep: number, eo: number, size: number): Promise<string> {
+	const w = await wasm();
+	return w.set_font_size(sp, so, ep, eo, size);
+}
+
+export async function setAlignment(paragraph: number, alignment: string): Promise<string> {
+	const w = await wasm();
+	return w.set_alignment(paragraph, alignment);
+}
+
+export async function undoEdit(): Promise<string> {
+	const w = await wasm();
+	return w.undo();
+}
+
+export async function redoEdit(): Promise<string> {
+	const w = await wasm();
+	return w.redo();
+}
+
+export async function canUndo(): Promise<boolean> {
+	const w = await wasm();
+	return w.can_undo();
+}
+
+export async function canRedo(): Promise<boolean> {
+	const w = await wasm();
+	return w.can_redo();
 }

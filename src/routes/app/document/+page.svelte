@@ -5,7 +5,7 @@
 	import RightMenu from '$lib/components/sidebar/right-menu.svelte';
 	import Statusbar from '$lib/components/statusbar/statusbar.svelte';
 	import { getDocumentState, setDocumentLoading, setDocumentContent } from '$lib/stores/document.svelte';
-	import { parseDocx } from '$lib/wasm/loader';
+	import { loadDocx, getPlainText, getWordCount, getParagraphCount } from '$lib/wasm/loader';
 
 	const doc = getDocumentState();
 	let fileInput: HTMLInputElement | undefined = $state();
@@ -22,12 +22,12 @@
 		try {
 			const buffer = await file.arrayBuffer();
 			const bytes = new Uint8Array(buffer);
-			const result = await parseDocx(bytes);
+			const html = await loadDocx(bytes);
+			const plainText = await getPlainText();
+			const wordCount = await getWordCount();
+			const paragraphCount = await getParagraphCount();
 
-			const paragraphCount = (result.html.match(/<p[\s>]/g) || []).length +
-				(result.html.match(/<h[1-6][\s>]/g) || []).length;
-
-			setDocumentContent(result.html, result.plainText, result.wordCount, paragraphCount);
+			setDocumentContent(html, plainText, wordCount, paragraphCount);
 		} catch (err) {
 			alert(`Failed to parse document: ${err}`);
 			setDocumentContent('', '', 0, 0);

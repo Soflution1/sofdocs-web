@@ -1,8 +1,91 @@
 <script lang="ts">
+	import { getDocumentState, updateDocumentHtml } from '$lib/stores/document.svelte';
+	import { getSelectionState } from '$lib/stores/selection.svelte';
+	import {
+		toggleBold,
+		toggleItalic,
+		toggleUnderline,
+		toggleStrikethrough,
+		setFontFamily,
+		setFontSize,
+		setAlignment,
+		undoEdit,
+		redoEdit,
+		saveDocx
+	} from '$lib/wasm/loader';
+
+	const doc = getDocumentState();
+	const sel = getSelectionState();
+
+	let selectedFont = $state('Arial');
+	let selectedSize = $state(11);
+
+	async function applyStyle(fn: (sp: number, so: number, ep: number, eo: number) => Promise<string>) {
+		if (!doc.isLoaded) return;
+		const html = await fn(sel.startPara, sel.startOffset, sel.endPara, sel.endOffset);
+		updateDocumentHtml(html);
+	}
+
+	async function onBold() { await applyStyle(toggleBold); }
+	async function onItalic() { await applyStyle(toggleItalic); }
+	async function onUnderline() { await applyStyle(toggleUnderline); }
+	async function onStrikethrough() { await applyStyle(toggleStrikethrough); }
+
+	async function onFontChange(e: Event) {
+		const font = (e.target as HTMLSelectElement).value;
+		selectedFont = font;
+		if (!doc.isLoaded) return;
+		const html = await setFontFamily(sel.startPara, sel.startOffset, sel.endPara, sel.endOffset, font);
+		updateDocumentHtml(html);
+	}
+
+	async function onSizeChange(e: Event) {
+		const size = parseInt((e.target as HTMLSelectElement).value, 10);
+		selectedSize = size;
+		if (!doc.isLoaded) return;
+		const html = await setFontSize(sel.startPara, sel.startOffset, sel.endPara, sel.endOffset, size);
+		updateDocumentHtml(html);
+	}
+
+	async function onAlign(alignment: string) {
+		if (!doc.isLoaded) return;
+		const html = await setAlignment(sel.startPara, alignment);
+		updateDocumentHtml(html);
+	}
+
+	async function onUndo() {
+		if (!doc.isLoaded) return;
+		const html = await undoEdit();
+		updateDocumentHtml(html);
+	}
+
+	async function onRedo() {
+		if (!doc.isLoaded) return;
+		const html = await redoEdit();
+		updateDocumentHtml(html);
+	}
+
+	async function onSave() {
+		if (!doc.isLoaded) return;
+		try {
+			const bytes = await saveDocx();
+			const blob = new Blob([new Uint8Array(bytes)], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = doc.fileName || 'document.docx';
+			a.click();
+			URL.revokeObjectURL(url);
+		} catch (err) {
+			alert(`Save failed: ${err}`);
+		}
+	}
+
 	interface ToolButton {
 		icon: string;
 		label: string;
 		title: string;
+		action?: () => void;
 	}
 
 	const clipboardGroup: ToolButton[] = [
@@ -12,21 +95,34 @@
 	];
 
 	const fontFormats = [
-		{ icon: 'B', title: 'Bold (Ctrl+B)', cls: 'font-bold' },
-		{ icon: 'I', title: 'Italic (Ctrl+I)', cls: 'italic' },
-		{ icon: 'U', title: 'Underline (Ctrl+U)', cls: 'underline' },
-		{ icon: 'S', title: 'Strikethrough', cls: 'line-through' }
+		{ icon: 'B', title: 'Bold (Ctrl+B)', cls: 'font-bold', action: onBold },
+		{ icon: 'I', title: 'Italic (Ctrl+I)', cls: 'italic', action: onItalic },
+		{ icon: 'U', title: 'Underline (Ctrl+U)', cls: 'underline', action: onUnderline },
+		{ icon: 'S', title: 'Strikethrough', cls: 'line-through', action: onStrikethrough }
 	];
 
 	const alignments = [
-		{ icon: '☰', title: 'Align Left' },
-		{ icon: '☰', title: 'Align Center' },
-		{ icon: '☰', title: 'Align Right' },
-		{ icon: '☰', title: 'Justify' }
+		{ icon: '☰', title: 'Align Left', value: 'left' },
+		{ icon: '☰', title: 'Align Center', value: 'center' },
+		{ icon: '☰', title: 'Align Right', value: 'right' },
+		{ icon: '☰', title: 'Justify', value: 'both' }
 	];
 </script>
 
 <div class="flex items-stretch h-[var(--spacing-toolbar-height)] bg-[var(--color-toolbar-bg)] border-b border-[var(--color-toolbar-border)] px-2 gap-3 select-none">
+	<!-- Undo/Redo + Save -->
+	<div class="flex items-center gap-0.5 pr-3 border-r border-[var(--color-toolbar-border)]">
+		<button class="w-[26px] h-[26px] flex items-center justify-center rounded hover:bg-[var(--color-toolbar-hover)] transition-all cursor-pointer text-[13px]" title="Undo (Ctrl+Z)" onclick={onUndo}>
+			↩
+		</button>
+		<button class="w-[26px] h-[26px] flex items-center justify-center rounded hover:bg-[var(--color-toolbar-hover)] transition-all cursor-pointer text-[13px]" title="Redo (Ctrl+Y)" onclick={onRedo}>
+			↪
+		</button>
+		<button class="w-[26px] h-[26px] flex items-center justify-center rounded hover:bg-[var(--color-toolbar-hover)] transition-all cursor-pointer text-[13px]" title="Save (Ctrl+S)" onclick={onSave}>
+			💾
+		</button>
+	</div>
+
 	<!-- Clipboard group -->
 	<div class="flex items-center gap-0.5 pr-3 border-r border-[var(--color-toolbar-border)]">
 		<button class="flex flex-col items-center justify-center w-[var(--spacing-button-big)] h-[var(--spacing-button-big)] rounded-md hover:bg-[var(--color-toolbar-hover)] transition-all cursor-pointer" title={clipboardGroup[0].title}>
@@ -45,7 +141,12 @@
 
 	<!-- Font family & size -->
 	<div class="flex items-center gap-1 pr-3 border-r border-[var(--color-toolbar-border)]">
-		<select class="h-[22px] w-[120px] text-[11px] border border-[var(--color-toolbar-border)] rounded px-1 bg-white appearance-none cursor-pointer" title="Font">
+		<select
+			class="h-[22px] w-[120px] text-[11px] border border-[var(--color-toolbar-border)] rounded px-1 bg-white appearance-none cursor-pointer"
+			title="Font"
+			bind:value={selectedFont}
+			onchange={onFontChange}
+		>
 			<option>Arial</option>
 			<option>Times New Roman</option>
 			<option>Calibri</option>
@@ -54,9 +155,14 @@
 			<option>Helvetica</option>
 			<option>Verdana</option>
 		</select>
-		<select class="h-[22px] w-[48px] text-[11px] border border-[var(--color-toolbar-border)] rounded px-1 bg-white appearance-none cursor-pointer text-center" title="Font Size">
+		<select
+			class="h-[22px] w-[48px] text-[11px] border border-[var(--color-toolbar-border)] rounded px-1 bg-white appearance-none cursor-pointer text-center"
+			title="Font Size"
+			bind:value={selectedSize}
+			onchange={onSizeChange}
+		>
 			{#each [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72] as size}
-				<option value={size} selected={size === 11}>{size}</option>
+				<option value={size}>{size}</option>
 			{/each}
 		</select>
 	</div>
@@ -67,25 +173,20 @@
 			<button
 				class="w-[26px] h-[26px] flex items-center justify-center rounded hover:bg-[var(--color-toolbar-hover)] transition-all cursor-pointer text-[13px] text-[var(--color-text-primary)] {fmt.cls}"
 				title={fmt.title}
+				onclick={fmt.action}
 			>
 				{fmt.icon}
 			</button>
 		{/each}
-		<button class="w-[26px] h-[26px] flex items-center justify-center rounded hover:bg-[var(--color-toolbar-hover)] transition-all cursor-pointer" title="Font Color">
-			<span class="text-[13px] font-bold text-red-600 border-b-2 border-red-600">A</span>
-		</button>
-		<button class="w-[26px] h-[26px] flex items-center justify-center rounded hover:bg-[var(--color-toolbar-hover)] transition-all cursor-pointer" title="Highlight Color">
-			<span class="text-[13px] font-bold bg-yellow-200 px-0.5">ab</span>
-		</button>
 	</div>
 
 	<!-- Paragraph alignment -->
 	<div class="flex items-center gap-0.5 pr-3 border-r border-[var(--color-toolbar-border)]">
-		{#each alignments as align, i}
+		{#each alignments as align}
 			<button
 				class="w-[26px] h-[26px] flex items-center justify-center rounded hover:bg-[var(--color-toolbar-hover)] transition-all cursor-pointer text-[11px] text-[var(--color-text-secondary)]"
 				title={align.title}
-				style={i === 1 ? 'text-align:center' : i === 2 ? 'text-align:right' : ''}
+				onclick={() => onAlign(align.value)}
 			>
 				{align.icon}
 			</button>
