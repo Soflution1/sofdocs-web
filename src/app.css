@@ -1,27 +1,69 @@
 @import 'tailwindcss';
 
 @theme {
-	/* OnlyOffice design tokens */
-	--color-toolbar-bg: #f7f7f7;
+	/* OnlyOffice exact tokens — extracted from colors-table.less (:root) */
+
+	/* Toolbar header (document blue) */
 	--color-toolbar-header: #446995;
-	--color-canvas-bg: #eee;
-	--color-page-bg: #fff;
-	--color-page-border: #ccc;
+	--color-toolbar-header-text: #ffffff;
+	--color-toolbar-header-hover: rgba(0, 0, 0, 0.15);
+	--color-toolbar-header-pressed: rgba(0, 0, 0, 0.25);
+	--color-toolbar-tab-underline: #ffffff;
+
+	/* Toolbar ribbon area */
+	--color-toolbar-bg: #f7f7f7;
+	--color-toolbar-additional: #efefef;
 	--color-toolbar-border: #cbcbcb;
 	--color-toolbar-hover: #e0e0e0;
+	--color-toolbar-pressed: #cbcbcb;
 	--color-toolbar-active: #d4d4d4;
-	--color-sidebar-bg: #f1f1f1;
+	--color-toolbar-shadow: 0px 1px 0 0 #cbcbcb;
+
+	/* Canvas & page */
+	--color-canvas-bg: #eeeeee;
+	--color-page-bg: #ffffff;
+	--color-page-border: #cccccc;
+
+	/* Sidebar & statusbar */
+	--color-sidebar-bg: #f7f7f7;
 	--color-statusbar-bg: #f7f7f7;
+	--color-statusbar-border: #cbcbcb;
+
+	/* Accent */
 	--color-accent: #446995;
 	--color-accent-hover: #365a82;
-	--color-text-primary: #333;
-	--color-text-secondary: #666;
-	--color-text-muted: #999;
+	--color-accent-button: #446995;
+	--color-text-select: #3494fb;
 
+	/* Text */
+	--color-text-primary: rgba(0, 0, 0, 0.8);
+	--color-text-secondary: rgba(0, 0, 0, 0.6);
+	--color-text-tertiary: rgba(0, 0, 0, 0.4);
+	--color-text-muted: rgba(0, 0, 0, 0.4);
+	--color-text-link: #445799;
+
+	/* Icons */
+	--color-icon-normal: #444444;
+
+	/* Spacing */
+	--spacing-toolbar-tabs-height: 32px;
+	--spacing-toolbar-controls-height: 66px;
 	--spacing-toolbar-height: 66px;
 	--spacing-statusbar-height: 25px;
 	--spacing-sidebar-width: 40px;
+	--spacing-sidebar-panel-width: 260px;
+
+	/* Buttons */
 	--spacing-button-big: 52px;
+	--spacing-button-big-icon: 28px;
+	--spacing-button-small: 20px;
+	--spacing-form-control: 22px;
+
+	/* Font */
+	--font-size-base: 11px;
+	--font-size-small: 9px;
+	--font-size-medium: 12px;
+	--font-size-large: 13px;
 }
 
 html, body {
@@ -29,7 +71,8 @@ html, body {
 	padding: 0;
 	height: 100%;
 	overflow: hidden;
-	font-family: 'Helvetica Neue', Arial, sans-serif;
+	font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+	font-size: var(--font-size-base);
 	color: var(--color-text-primary);
 	background: var(--color-canvas-bg);
 }

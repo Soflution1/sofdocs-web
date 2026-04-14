@@ -206,6 +206,59 @@
 		}
 	}
 
+	async function handlePaste(e: ClipboardEvent) {
+		e.preventDefault();
+		if (!e.clipboardData) return;
+
+		const plainText = e.clipboardData.getData('text/plain');
+		if (!plainText) return;
+
+		if (!sel.collapsed) {
+			const html = await deleteRange(sel.startPara, sel.startOffset, sel.endPara, sel.endOffset);
+			updateDocumentHtml(html);
+		}
+
+		const lines = plainText.split('\n');
+		let currentPara = sel.startPara;
+		let currentOffset = sel.startOffset;
+
+		for (let i = 0; i < lines.length; i++) {
+			if (lines[i].length > 0) {
+				const html = await insertText(currentPara, currentOffset, lines[i]);
+				updateDocumentHtml(html);
+				currentOffset += lines[i].length;
+			}
+			if (i < lines.length - 1) {
+				const html = await splitParagraph(currentPara, currentOffset);
+				updateDocumentHtml(html);
+				currentPara++;
+				currentOffset = 0;
+			}
+		}
+
+		await tick();
+		restoreCursor(currentPara, currentOffset);
+		syncSelection();
+		refreshCounts();
+	}
+
+	async function handleCopy(e: ClipboardEvent) {
+		const domSel = window.getSelection();
+		if (!domSel || domSel.isCollapsed) return;
+
+		e.preventDefault();
+		const selectedText = domSel.toString();
+
+		const range = domSel.getRangeAt(0);
+		const fragment = range.cloneContents();
+		const wrapper = document.createElement('div');
+		wrapper.appendChild(fragment);
+		const selectedHtml = wrapper.innerHTML;
+
+		e.clipboardData?.setData('text/plain', selectedText);
+		e.clipboardData?.setData('text/html', selectedHtml);
+	}
+
 	async function handleKeydown(e: KeyboardEvent) {
 		const mod = e.metaKey || e.ctrlKey;
 
@@ -302,6 +355,9 @@
 				onbeforeinput={handleBeforeInput}
 				oninput={handleInput}
 				onkeydown={handleKeydown}
+				onpaste={handlePaste}
+				oncopy={handleCopy}
+				oncut={handleCopy}
 				onselectionchange={syncSelection}
 				onmouseup={syncSelection}
 				oncompositionstart={() => (isComposing = true)}
@@ -345,6 +401,14 @@
 		font-size: 1.17em;
 		font-weight: bold;
 	}
+	:global(.sofdocs-content ul),
+	:global(.sofdocs-content ol) {
+		margin: 0;
+		padding-left: 2em;
+	}
+	:global(.sofdocs-content li) {
+		padding: 1px 0;
+	}
 	:global(.sofdocs-content table) {
 		border-collapse: collapse;
 		width: 100%;
@@ -353,5 +417,9 @@
 	:global(.sofdocs-content td) {
 		border: 1px solid #ccc;
 		padding: 4px 8px;
+	}
+	:global(.sofdocs-content img) {
+		max-width: 100%;
+		display: inline-block;
 	}
 </style>
