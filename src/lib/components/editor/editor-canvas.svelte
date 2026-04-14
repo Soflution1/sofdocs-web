@@ -206,33 +206,119 @@
 		}
 	}
 
+	interface PasteRun {
+		text: string;
+		bold: boolean;
+		italic: boolean;
+		underline: boolean;
+		newParagraph: boolean;
+	}
+
+	function parseHtmlToRuns(htmlStr: string): PasteRun[] {
+		const doc2 = new DOMParser().parseFromString(htmlStr, 'text/html');
+		const runs: PasteRun[] = [];
+
+		function walkNode(node: Node, inheritBold: boolean, inheritItalic: boolean, inheritUnderline: boolean) {
+			if (node.nodeType === Node.TEXT_NODE) {
+				const text = node.textContent || '';
+				if (text.length > 0) {
+					runs.push({ text, bold: inheritBold, italic: inheritItalic, underline: inheritUnderline, newParagraph: false });
+				}
+				return;
+			}
+			if (node.nodeType !== Node.ELEMENT_NODE) return;
+			const el = node as HTMLElement;
+			const tag = el.tagName.toLowerCase();
+
+			let bold = inheritBold;
+			let italic = inheritItalic;
+			let underline = inheritUnderline;
+
+			if (tag === 'b' || tag === 'strong') bold = true;
+			if (tag === 'i' || tag === 'em') italic = true;
+			if (tag === 'u') underline = true;
+
+			const style = el.style;
+			if (style.fontWeight === 'bold' || parseInt(style.fontWeight) >= 700) bold = true;
+			if (style.fontStyle === 'italic') italic = true;
+			if (style.textDecoration?.includes('underline')) underline = true;
+
+			if (tag === 'p' || tag === 'div' || tag === 'br' || tag === 'li') {
+				if (runs.length > 0) {
+					runs.push({ text: '', bold: false, italic: false, underline: false, newParagraph: true });
+				}
+			}
+
+			for (const child of el.childNodes) {
+				walkNode(child, bold, italic, underline);
+			}
+		}
+
+		walkNode(doc2.body, false, false, false);
+		return runs;
+	}
+
 	async function handlePaste(e: ClipboardEvent) {
 		e.preventDefault();
 		if (!e.clipboardData) return;
 
-		const plainText = e.clipboardData.getData('text/plain');
-		if (!plainText) return;
-
 		if (!sel.collapsed) {
-			const html = await deleteRange(sel.startPara, sel.startOffset, sel.endPara, sel.endOffset);
-			updateDocumentHtml(html);
+			const result = await deleteRange(sel.startPara, sel.startOffset, sel.endPara, sel.endOffset);
+			updateDocumentHtml(result);
 		}
 
-		const lines = plainText.split('\n');
+		const htmlData = e.clipboardData.getData('text/html');
+		const plainText = e.clipboardData.getData('text/plain');
+
 		let currentPara = sel.startPara;
 		let currentOffset = sel.startOffset;
 
-		for (let i = 0; i < lines.length; i++) {
-			if (lines[i].length > 0) {
-				const html = await insertText(currentPara, currentOffset, lines[i]);
-				updateDocumentHtml(html);
-				currentOffset += lines[i].length;
+		if (htmlData) {
+			const pasteRuns = parseHtmlToRuns(htmlData);
+			for (const run of pasteRuns) {
+				if (run.newParagraph) {
+					const result = await splitParagraph(currentPara, currentOffset);
+					updateDocumentHtml(result);
+					currentPara++;
+					currentOffset = 0;
+					continue;
+				}
+				if (run.text.length === 0) continue;
+
+				const result = await insertText(currentPara, currentOffset, run.text);
+				updateDocumentHtml(result);
+
+				const endOffset = currentOffset + run.text.length;
+
+				if (run.bold) {
+					const r = await toggleBold(currentPara, currentOffset, currentPara, endOffset);
+					updateDocumentHtml(r);
+				}
+				if (run.italic) {
+					const r = await toggleItalic(currentPara, currentOffset, currentPara, endOffset);
+					updateDocumentHtml(r);
+				}
+				if (run.underline) {
+					const r = await toggleUnderline(currentPara, currentOffset, currentPara, endOffset);
+					updateDocumentHtml(r);
+				}
+
+				currentOffset = endOffset;
 			}
-			if (i < lines.length - 1) {
-				const html = await splitParagraph(currentPara, currentOffset);
-				updateDocumentHtml(html);
-				currentPara++;
-				currentOffset = 0;
+		} else if (plainText) {
+			const lines = plainText.split('\n');
+			for (let i = 0; i < lines.length; i++) {
+				if (lines[i].length > 0) {
+					const result = await insertText(currentPara, currentOffset, lines[i]);
+					updateDocumentHtml(result);
+					currentOffset += lines[i].length;
+				}
+				if (i < lines.length - 1) {
+					const result = await splitParagraph(currentPara, currentOffset);
+					updateDocumentHtml(result);
+					currentPara++;
+					currentOffset = 0;
+				}
 			}
 		}
 
