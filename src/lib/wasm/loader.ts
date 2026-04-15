@@ -128,6 +128,86 @@ export async function canRedo(): Promise<boolean> {
 	return w.can_redo();
 }
 
+export async function setColor(sp: number, so: number, ep: number, eo: number, color: string): Promise<string> {
+	const w = await wasm();
+	return w.set_color(sp, so, ep, eo, color);
+}
+
+export async function setHighlight(sp: number, so: number, ep: number, eo: number, color: string): Promise<string> {
+	const w = await wasm();
+	return w.set_highlight(sp, so, ep, eo, color);
+}
+
+export async function toggleSuperscript(sp: number, so: number, ep: number, eo: number): Promise<string> {
+	const w = await wasm();
+	return w.toggle_superscript(sp, so, ep, eo);
+}
+
+export async function toggleSubscript(sp: number, so: number, ep: number, eo: number): Promise<string> {
+	const w = await wasm();
+	return w.toggle_subscript(sp, so, ep, eo);
+}
+
+export async function clearFormatting(sp: number, so: number, ep: number, eo: number): Promise<string> {
+	const w = await wasm();
+	return w.clear_formatting(sp, so, ep, eo);
+}
+
+export async function setIndent(paragraph: number, left: number, right: number, firstLine: number): Promise<string> {
+	const w = await wasm();
+	return w.set_indent(paragraph, left, right, firstLine);
+}
+
+export async function setSpacing(paragraph: number, before: number, after: number, line: number): Promise<string> {
+	const w = await wasm();
+	return w.set_spacing(paragraph, before, after, line);
+}
+
+export async function setHeadingLevel(paragraph: number, level: number): Promise<string> {
+	const w = await wasm();
+	return w.set_heading_level(paragraph, level);
+}
+
+export async function toggleList(paragraph: number, listType: string): Promise<string> {
+	const w = await wasm();
+	return w.toggle_list(paragraph, listType);
+}
+
+export async function findText(query: string): Promise<string> {
+	const w = await wasm();
+	return w.find_text(query);
+}
+
+export async function replaceText(para: number, offset: number, len: number, replacement: string): Promise<string> {
+	const w = await wasm();
+	return w.replace_text(para, offset, len, replacement);
+}
+
+export async function replaceAll(query: string, replacement: string): Promise<string> {
+	const w = await wasm();
+	return w.replace_all(query, replacement);
+}
+
+export async function insertTable(paragraph: number, rows: number, cols: number): Promise<string> {
+	const w = await wasm();
+	return w.insert_table(paragraph, rows, cols);
+}
+
+export async function insertPageBreak(paragraph: number): Promise<string> {
+	const w = await wasm();
+	return w.insert_page_break(paragraph);
+}
+
+export async function insertHyperlink(para: number, startOffset: number, endOffset: number, url: string): Promise<string> {
+	const w = await wasm();
+	return w.insert_hyperlink(para, startOffset, endOffset, url);
+}
+
+export async function insertBookmark(para: number, offset: number, name: string): Promise<string> {
+	const w = await wasm();
+	return w.insert_bookmark(para, offset, name);
+}
+
 export async function getHeaderHtml(): Promise<string> {
 	const w = await wasm();
 	return w.get_header_html();

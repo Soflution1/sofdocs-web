@@ -2,9 +2,18 @@
 	import Icon from '$lib/components/ui/icon.svelte';
 	import { getDocumentState } from '$lib/stores/document.svelte';
 	import { getUIState, setZoom } from '$lib/stores/ui.svelte';
+	import { getPageCount } from '$lib/wasm/loader';
 
 	const doc = getDocumentState();
 	const ui = getUIState();
+
+	$effect(() => {
+		if (doc.isLoaded) {
+			getPageCount().then((count) => {
+				ui.totalPages = count;
+			});
+		}
+	});
 
 	function handleZoomChange(e: Event) {
 		const target = e.target as HTMLInputElement;

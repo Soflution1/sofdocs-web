@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Icon from '$lib/components/ui/icon.svelte';
-	import { getDocumentState } from '$lib/stores/document.svelte';
-	import { saveDocx } from '$lib/wasm/loader';
+	import { getDocumentState, resetDocument, setDocumentLoading, setDocumentContent } from '$lib/stores/document.svelte';
+	import { saveDocx, loadDocx, getPlainText, getWordCount, getParagraphCount } from '$lib/wasm/loader';
 
 	interface Props {
 		onclose: () => void;
@@ -30,8 +30,35 @@
 		onclose();
 	}
 
+	function handleNew() {
+		resetDocument();
+		onclose();
+	}
+
+	async function handleFileSelected(e: Event) {
+		const input = e.target as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file || !file.name.endsWith('.docx')) return;
+
+		setDocumentLoading(file.name);
+		onclose();
+
+		try {
+			const buffer = await file.arrayBuffer();
+			const bytes = new Uint8Array(buffer);
+			const html = await loadDocx(bytes);
+			const plainText = await getPlainText();
+			const wordCount = await getWordCount();
+			const paragraphCount = await getParagraphCount();
+			setDocumentContent(html, plainText, wordCount, paragraphCount);
+		} catch (err) {
+			alert(`Failed to parse document: ${err}`);
+			setDocumentContent('', '', 0, 0);
+		}
+	}
+
 	const menuItems = [
-		{ icon: 'btn-save', label: 'New', description: 'Create a new document', action: () => onclose() },
+		{ icon: 'btn-save', label: 'New', description: 'Create a new document', action: handleNew },
 		{ icon: 'btn-download', label: 'Open', description: 'Open an existing document', action: () => { fileInput?.click(); } },
 		{ icon: 'btn-save', label: 'Save', description: 'Download the current document', action: handleSave },
 		{ icon: 'btn-print', label: 'Print', description: 'Print the document', action: () => { window.print(); onclose(); } },
@@ -78,6 +105,7 @@
 		bind:this={fileInput}
 		type="file"
 		accept=".docx"
+		onchange={handleFileSelected}
 		class="hidden"
 	/>
 </div>

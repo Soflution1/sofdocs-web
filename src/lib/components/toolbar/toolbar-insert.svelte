@@ -1,13 +1,42 @@
 <script lang="ts">
 	import Icon from '$lib/components/ui/icon.svelte';
 	import TableGridPicker from '$lib/components/ui/table-grid-picker.svelte';
+	import HyperlinkModal from '$lib/components/ui/hyperlink-modal.svelte';
+	import BookmarkModal from '$lib/components/ui/bookmark-modal.svelte';
+	import { getDocumentState, updateDocumentHtml } from '$lib/stores/document.svelte';
+	import { getSelectionState } from '$lib/stores/selection.svelte';
+	import { insertTable, insertPageBreak, insertHyperlink, insertBookmark } from '$lib/wasm/loader';
+
+	const doc = getDocumentState();
+	const sel = getSelectionState();
 
 	let showTablePicker = $state(false);
+	let showHyperlinkModal = $state(false);
+	let showBookmarkModal = $state(false);
 
-	function onTableSelect(rows: number, cols: number) {
+	async function onTableSelect(rows: number, cols: number) {
 		showTablePicker = false;
-		// TODO: insert table via WASM when table editing is implemented
-		console.log(`Insert table: ${rows}×${cols}`);
+		if (!doc.isLoaded) return;
+		const html = await insertTable(sel.startPara, rows, cols);
+		updateDocumentHtml(html);
+	}
+
+	async function onPageBreak() {
+		if (!doc.isLoaded) return;
+		const html = await insertPageBreak(sel.startPara);
+		updateDocumentHtml(html);
+	}
+
+	async function onHyperlink(url: string) {
+		if (!doc.isLoaded) return;
+		const html = await insertHyperlink(sel.startPara, sel.startOffset, sel.endOffset, url);
+		updateDocumentHtml(html);
+	}
+
+	async function onBookmark(name: string) {
+		if (!doc.isLoaded) return;
+		const html = await insertBookmark(sel.startPara, sel.startOffset, name);
+		updateDocumentHtml(html);
 	}
 </script>
 
@@ -15,7 +44,7 @@
 
 	<!-- Pages -->
 	<div class="toolbar-group">
-		<button class="toolbar-btn-big" title="Page Break">
+		<button class="toolbar-btn-big" title="Page Break" onclick={onPageBreak}>
 			<Icon name="btn-pagebreak" size="big" />
 			<span class="toolbar-btn-label">Break</span>
 		</button>
@@ -25,21 +54,14 @@
 		</button>
 	</div>
 
-	<!-- Tables — with grid picker -->
+	<!-- Tables -->
 	<div class="toolbar-group relative">
-		<button
-			class="toolbar-btn-big"
-			title="Insert Table"
-			onclick={() => (showTablePicker = !showTablePicker)}
-		>
+		<button class="toolbar-btn-big" title="Insert Table" onclick={() => (showTablePicker = !showTablePicker)}>
 			<Icon name="btn-inserttable" size="big" />
 			<span class="toolbar-btn-label">Table ▾</span>
 		</button>
 		{#if showTablePicker}
-			<TableGridPicker
-				onselect={onTableSelect}
-				onclose={() => (showTablePicker = false)}
-			/>
+			<TableGridPicker onselect={onTableSelect} onclose={() => (showTablePicker = false)} />
 		{/if}
 	</div>
 
@@ -70,10 +92,10 @@
 	<!-- Links -->
 	<div class="toolbar-group">
 		<div class="flex flex-col gap-0.5">
-			<button class="toolbar-btn-sm" title="Hyperlink">
+			<button class="toolbar-btn-sm" title="Hyperlink" onclick={() => (showHyperlinkModal = true)}>
 				<Icon name="btn-hyperlink" />
 			</button>
-			<button class="toolbar-btn-sm" title="Bookmark">
+			<button class="toolbar-btn-sm" title="Bookmark" onclick={() => (showBookmarkModal = true)}>
 				<Icon name="btn-bookmark" />
 			</button>
 		</div>
@@ -128,12 +150,17 @@
 	</div>
 </div>
 
+{#if showHyperlinkModal}
+	<HyperlinkModal onconfirm={onHyperlink} onclose={() => (showHyperlinkModal = false)} />
+{/if}
+
+{#if showBookmarkModal}
+	<BookmarkModal onconfirm={onBookmark} onclose={() => (showBookmarkModal = false)} />
+{/if}
+
 <style>
 	.toolbar-group {
-		display: flex;
-		align-items: center;
-		gap: 2px;
-		padding: 0 6px;
+		display: flex; align-items: center; gap: 2px; padding: 0 6px;
 		border-right: 1px solid var(--color-toolbar-border);
 	}
 </style>

@@ -361,6 +361,32 @@
 		e.clipboardData?.setData('text/html', selectedHtml);
 	}
 
+	async function handleCut(e: ClipboardEvent) {
+		const domSel = window.getSelection();
+		if (!domSel || domSel.isCollapsed) return;
+
+		e.preventDefault();
+		const selectedText = domSel.toString();
+
+		const range = domSel.getRangeAt(0);
+		const fragment = range.cloneContents();
+		const wrapper = document.createElement('div');
+		wrapper.appendChild(fragment);
+		const selectedHtml = wrapper.innerHTML;
+
+		e.clipboardData?.setData('text/plain', selectedText);
+		e.clipboardData?.setData('text/html', selectedHtml);
+
+		if (!sel.collapsed) {
+			const html = await deleteRange(sel.startPara, sel.startOffset, sel.endPara, sel.endOffset);
+			updateDocumentHtml(html);
+			await tick();
+			restoreCursor(sel.startPara, sel.startOffset);
+			syncSelection();
+			refreshCounts();
+		}
+	}
+
 	async function handleKeydown(e: KeyboardEvent) {
 		const mod = e.metaKey || e.ctrlKey;
 
@@ -481,7 +507,7 @@
 					onkeydown={handleKeydown}
 					onpaste={handlePaste}
 					oncopy={handleCopy}
-					oncut={handleCopy}
+					oncut={handleCut}
 					onselectionchange={syncSelection}
 					onmouseup={syncSelection}
 					oncompositionstart={() => (isComposing = true)}
